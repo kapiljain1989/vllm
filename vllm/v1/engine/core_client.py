@@ -53,6 +53,7 @@ from vllm.v1.engine.utils import (
     launch_core_engines,
 )
 from vllm.v1.executor import Executor
+from vllm.v1.kv_cache_interface import KVCacheConfig
 from vllm.v1.pool.late_interaction import get_late_interaction_engine_index
 from vllm.v1.serial_utils import MsgpackDecoder, MsgpackEncoder, bytestr
 
@@ -210,6 +211,9 @@ class EngineCoreClient(ABC):
         raise NotImplementedError
 
     async def get_supported_tasks_async(self) -> tuple[SupportedTask, ...]:
+        raise NotImplementedError
+
+    async def get_kv_cache_config_async(self) -> KVCacheConfig:
         raise NotImplementedError
 
     async def add_request_async(self, request: EngineCoreRequest) -> None:
@@ -1026,6 +1030,9 @@ class AsyncMPClient(MPClient):
 
     async def get_supported_tasks_async(self) -> tuple[SupportedTask, ...]:
         return await self.call_utility_async("get_supported_tasks")
+
+    async def get_kv_cache_config_async(self) -> KVCacheConfig:
+        return await self.call_utility_async("get_kv_cache_config")
 
     async def add_request_async(self, request: EngineCoreRequest) -> None:
         request.client_index = self.client_index
