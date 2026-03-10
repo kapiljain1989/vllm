@@ -5,19 +5,6 @@ from fastapi import APIRouter, FastAPI, Request
 
 from vllm.config import VllmConfig
 from vllm.logger import init_logger
-from vllm.v1.kv_cache_interface import (
-    ChunkedLocalAttentionSpec,
-    CrossAttentionSpec,
-    FullAttentionSpec,
-    KVCacheConfig,
-    KVCacheGroupSpec,
-    KVCacheSpec,
-    MambaSpec,
-    MLAAttentionSpec,
-    SinkFullAttentionSpec,
-    SlidingWindowSpec,
-    UniformTypeKVCacheSpecs,
-)
 
 from .protocol import (
     ChunkedLocalAttentionGroupSpec,
@@ -33,132 +20,46 @@ from .protocol import (
     SinkFullAttentionGroupSpec,
     SlidingWindowGroupSpec,
     UniformTypeGroupSpec,
-    _BaseGroupSpec,
 )
 
 logger = init_logger(__name__)
 
 router = APIRouter()
 
+_SPEC_TYPE_TO_MODEL: dict[str, type] = {
+    "FullAttentionSpec": FullAttentionGroupSpec,
+    "MLAAttentionSpec": MLAAttentionGroupSpec,
+    "SlidingWindowSpec": SlidingWindowGroupSpec,
+    "ChunkedLocalAttentionSpec": ChunkedLocalAttentionGroupSpec,
+    "MambaSpec": MambaGroupSpec,
+    "CrossAttentionSpec": CrossAttentionGroupSpec,
+    "SinkFullAttentionSpec": SinkFullAttentionGroupSpec,
+    "UniformTypeKVCacheSpecs": UniformTypeGroupSpec,
+}
 
-def _dtype_str(dtype) -> str:
-    """Convert a torch.dtype to a plain string, e.g. 'bfloat16'."""
-    return str(dtype).replace("torch.", "")
 
-
-def _build_group_spec(group: KVCacheGroupSpec) -> KVCacheGroupInfo:
-    """Map one internal KVCacheGroupSpec to its API protocol counterpart."""
-    spec = group.kv_cache_spec
-
-    if spec.__class__ is KVCacheSpec:
-        base = dict(
-            layer_names=group.layer_names,
-            block_size=spec.block_size,
-            page_size_bytes=0,
-        )
-        return _BaseGroupSpec(
-            **base,
-        )
-    else:
-        base = dict(
-            layer_names=group.layer_names,
-            block_size=spec.block_size,
-            page_size_bytes=spec.page_size_bytes,
-        )
-
-    # Most-derived types must be checked before their base types.
-    if isinstance(spec, MLAAttentionSpec):
-        return MLAAttentionGroupSpec(
-            **base,
-            num_kv_heads=spec.num_kv_heads,
-            head_size=spec.head_size,
-            head_size_v=spec.head_size_v,
-            dtype=_dtype_str(spec.dtype),
-            sliding_window=spec.sliding_window,
-            attention_chunk_size=spec.attention_chunk_size,
-            cache_dtype_str=spec.cache_dtype_str,
-        )
-    if isinstance(spec, SinkFullAttentionSpec):
-        return SinkFullAttentionGroupSpec(
-            **base,
-            num_kv_heads=spec.num_kv_heads,
-            head_size=spec.head_size,
-            head_size_v=spec.head_size_v,
-            dtype=_dtype_str(spec.dtype),
-            sliding_window=spec.sliding_window,
-            attention_chunk_size=spec.attention_chunk_size,
-            sink_len=spec.sink_len,
-        )
-    if isinstance(spec, FullAttentionSpec):
-        return FullAttentionGroupSpec(
-            **base,
-            num_kv_heads=spec.num_kv_heads,
-            head_size=spec.head_size,
-            head_size_v=spec.head_size_v,
-            dtype=_dtype_str(spec.dtype),
-            sliding_window=spec.sliding_window,
-            attention_chunk_size=spec.attention_chunk_size,
-        )
-    if isinstance(spec, SlidingWindowSpec):
-        return SlidingWindowGroupSpec(
-            **base,
-            num_kv_heads=spec.num_kv_heads,
-            head_size=spec.head_size,
-            dtype=_dtype_str(spec.dtype),
-            sliding_window=spec.sliding_window,
-        )
-    if isinstance(spec, ChunkedLocalAttentionSpec):
-        return ChunkedLocalAttentionGroupSpec(
-            **base,
-            num_kv_heads=spec.num_kv_heads,
-            head_size=spec.head_size,
-            dtype=_dtype_str(spec.dtype),
-            attention_chunk_size=spec.attention_chunk_size,
-        )
-    if isinstance(spec, CrossAttentionSpec):
-        return CrossAttentionGroupSpec(
-            **base,
-            num_kv_heads=spec.num_kv_heads,
-            head_size=spec.head_size,
-            dtype=_dtype_str(spec.dtype),
-        )
-    if isinstance(spec, MambaSpec):
-        return MambaGroupSpec(
-            **base,
-            shapes=[list(s) for s in spec.shapes],
-            dtypes=[_dtype_str(d) for d in spec.dtypes],
-            mamba_type=spec.mamba_type,
-            mamba_cache_mode=spec.mamba_cache_mode,
-        )
-    if isinstance(spec, UniformTypeKVCacheSpecs):
-        layer_specs = [
-            _build_group_spec(KVCacheGroupSpec([name], sub_spec)).model_dump()
-            for name, sub_spec in spec.kv_cache_specs.items()
-        ]
-        return UniformTypeGroupSpec(**base, layer_specs=layer_specs)
-
-    raise ValueError(f"Unhandled KVCacheSpec type: {type(spec)!r}")
+def _build_group_spec(group: dict) -> KVCacheGroupInfo:
+    """Map one serialized group dict to its API protocol counterpart."""
+    spec_type = group["spec_type"]
+    model_cls = _SPEC_TYPE_TO_MODEL.get(spec_type)
+    if model_cls is None:
+        raise ValueError(f"Unhandled KVCacheSpec type: {spec_type!r}")
+    return model_cls(**group)
 
 
 def _build_response(
     vllm_config: VllmConfig,
-    kv_cache_config: KVCacheConfig | None,
+    kv_cache_groups: list[dict] | None,
 ) -> InferenceConfigResponse:
     cache_cfg = vllm_config.cache_config
     parallel_cfg = vllm_config.parallel_config
     scheduler_cfg = vllm_config.scheduler_config
 
     groups: list[KVCacheGroupInfo] = (
-        [_build_group_spec(g) for g in kv_cache_config.kv_cache_groups]
-        if kv_cache_config is not None
+        [_build_group_spec(g) for g in kv_cache_groups]
+        if kv_cache_groups is not None
         else []
     )
-
-    """if kv_cache_config is not None:
-        for g in kv_cache_config.kv_cache_groups:
-            logger.info(f"Group: {g}. Type: {type(g.kv_cache_spec)!r}")
-    else:
-        logger.info("No Groups")"""
 
     return InferenceConfigResponse(
         kv_cache=KVCacheInfo(
@@ -193,8 +94,8 @@ def _build_response(
 @router.get("/inference/v1/config")
 async def get_inference_config(raw_request: Request) -> InferenceConfigResponse:
     vllm_config: VllmConfig = raw_request.app.state.vllm_config
-    kv_cache_config: KVCacheConfig | None = raw_request.app.state.kv_cache_config
-    return _build_response(vllm_config, kv_cache_config)
+    kv_cache_groups: list[dict] | None = raw_request.app.state.kv_cache_config
+    return _build_response(vllm_config, kv_cache_groups)
 
 
 def attach_router(app: FastAPI) -> None:

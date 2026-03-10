@@ -18,8 +18,6 @@ class _BaseGroupSpec(BaseModel):
     block_size: int
     page_size_bytes: int
 
-    spec_type: Literal["_BaseGroupSpec"] = "_BaseGroupSpec"
-
 
 class FullAttentionGroupSpec(_BaseGroupSpec):
     spec_type: Literal["FullAttentionSpec"] = "FullAttentionSpec"
@@ -97,8 +95,7 @@ class UniformTypeGroupSpec(_BaseGroupSpec):
 
 # Discriminated union — ``spec_type`` is the discriminator field.
 KVCacheGroupInfo = Annotated[
-    _BaseGroupSpec
-    | FullAttentionGroupSpec
+    FullAttentionGroupSpec
     | MLAAttentionGroupSpec
     | SlidingWindowGroupSpec
     | ChunkedLocalAttentionGroupSpec
