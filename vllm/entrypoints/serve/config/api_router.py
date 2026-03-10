@@ -11,6 +11,7 @@ from vllm.v1.kv_cache_interface import (
     FullAttentionSpec,
     KVCacheConfig,
     KVCacheGroupSpec,
+    KVCacheSpec,
     MambaSpec,
     MLAAttentionSpec,
     SinkFullAttentionSpec,
@@ -32,6 +33,7 @@ from .protocol import (
     SinkFullAttentionGroupSpec,
     SlidingWindowGroupSpec,
     UniformTypeGroupSpec,
+    _BaseGroupSpec,
 )
 
 logger = init_logger(__name__)
@@ -47,11 +49,22 @@ def _dtype_str(dtype) -> str:
 def _build_group_spec(group: KVCacheGroupSpec) -> KVCacheGroupInfo:
     """Map one internal KVCacheGroupSpec to its API protocol counterpart."""
     spec = group.kv_cache_spec
-    base = dict(
-        layer_names=group.layer_names,
-        block_size=spec.block_size,
-        page_size_bytes=spec.page_size_bytes,
-    )
+
+    if spec.__class__ is KVCacheSpec:
+        base = dict(
+            layer_names=group.layer_names,
+            block_size=spec.block_size,
+            page_size_bytes=0,
+        )
+        return _BaseGroupSpec(
+            **base,
+        )
+    else:
+        base = dict(
+            layer_names=group.layer_names,
+            block_size=spec.block_size,
+            page_size_bytes=spec.page_size_bytes,
+        )
 
     # Most-derived types must be checked before their base types.
     if isinstance(spec, MLAAttentionSpec):
@@ -140,6 +153,12 @@ def _build_response(
         if kv_cache_config is not None
         else []
     )
+
+    """if kv_cache_config is not None:
+        for g in kv_cache_config.kv_cache_groups:
+            logger.info(f"Group: {g}. Type: {type(g.kv_cache_spec)!r}")
+    else:
+        logger.info("No Groups")"""
 
     return InferenceConfigResponse(
         kv_cache=KVCacheInfo(
