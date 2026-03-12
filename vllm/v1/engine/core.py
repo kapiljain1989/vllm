@@ -396,6 +396,9 @@ class EngineCore:
     def get_kv_cache_config(self) -> list[dict]:
         return _serialize_kv_cache_groups(self.scheduler.kv_cache_config)
 
+    def get_device_info(self) -> list[dict]:
+        return self.model_executor.collective_rpc("get_device_info")
+
     def add_request(self, request: Request, request_wave: int = 0):
         """Add request to the scheduler.
 
