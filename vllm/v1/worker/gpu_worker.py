@@ -708,6 +708,22 @@ class Worker(WorkerBase):
 
         return get_match_table()
 
+    def get_device_info(self) -> dict:
+        """Return local device properties for this rank."""
+        device_id = self.local_rank
+        capability = current_platform.get_device_capability(device_id)
+        return {
+            "rank": self.rank,
+            "name": current_platform.get_device_name(device_id),
+            "total_memory_bytes": current_platform.get_device_total_memory(device_id),
+            "compute_capability": (
+                {"major": capability.major, "minor": capability.minor}
+                if capability is not None
+                else None
+            ),
+            "num_compute_units": current_platform.num_compute_units(device_id),
+        }
+
     def get_encoder_timing_stats(self) -> dict[str, dict[str, float | int]]:
         """Get encoder timing stats from model runner."""
         return self.model_runner.get_encoder_timing_stats()
