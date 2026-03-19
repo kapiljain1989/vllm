@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 class _BaseGroupSpec(BaseModel):
     """Fields common to every KV cache group spec."""
 
+    group_id: int
     layer_names: list[str]
     block_size: int
     page_size_bytes: int
