@@ -181,7 +181,10 @@ def _serialize_group(group: KVCacheGroupSpec) -> dict:
 
 
 def _serialize_kv_cache_groups(kv_cache_config: KVCacheConfig) -> list[dict]:
-    return [_serialize_group(g) for g in kv_cache_config.kv_cache_groups]
+    return [
+        {"group_id": i} | _serialize_group(g)
+        for i, g in enumerate(kv_cache_config.kv_cache_groups)
+    ]
 
 
 class EngineCore:
