@@ -97,6 +97,7 @@ class LRUOffloadingManager(OffloadingManager):
                     block_size=self.backend.block_size,
                     medium=self.backend.medium,
                     removed=True,
+                    evicted_groups=None,  # TODO MH: Can we get group ids?
                 )
             )
 
