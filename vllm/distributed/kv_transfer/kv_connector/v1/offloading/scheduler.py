@@ -416,7 +416,11 @@ class OffloadingConnectorScheduler:
         for event in self.manager.take_events():
             block_hashes = [get_offload_block_hash(key) for key in event.keys]
             if event.removed:
-                yield BlockRemoved(block_hashes=block_hashes, medium=event.medium)
+                yield BlockRemoved(
+                    block_hashes=block_hashes,
+                    medium=event.medium,
+                    group_ids=None,
+                )
             else:
                 yield BlockStored(
                     block_hashes=block_hashes,
@@ -426,4 +430,5 @@ class OffloadingConnectorScheduler:
                     block_size=event.block_size,
                     medium=event.medium,
                     lora_name=None,
+                    group_ids=None,
                 )

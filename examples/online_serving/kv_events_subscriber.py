@@ -43,10 +43,22 @@ class BlockStored(KVCacheEvent):
     prompt embeddings data, etc. for that specific block.
     """
 
+    group_ids: list[int] | None = None
+    """KV cache group IDs, one per block in block_hashes. Used in hybrid models
+    with different attention mechanisms (e.g., full attention + sliding window).
+    None for non-hybrid models or backward compatibility.
+    """
+
 
 class BlockRemoved(KVCacheEvent):
     block_hashes: list[ExternalBlockHash]
     medium: str | None
+
+    group_ids: list[int] | None = None
+    """KV cache group IDs, one per block in block_hashes. Used in hybrid models
+    with different attention mechanisms. None for non-hybrid models or backward
+    compatibility.
+    """
 
 
 class AllBlocksCleared(KVCacheEvent):

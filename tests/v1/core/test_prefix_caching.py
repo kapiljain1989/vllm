@@ -2087,6 +2087,78 @@ def test_kv_cache_events_with_lora(blocks_to_cache: int):
     assert block_stored_event.block_size == block_size
 
 
+def test_kv_cache_events_with_hybrid_groups():
+    """Test that KV cache events include correct group_ids for hybrid models."""
+    block_size = 16
+    num_blocks = 20
+    blocks_to_cache = 3
+
+    # Create a hybrid KV cache manager with 3 groups (simulating different attention mechanisms)
+    kv_cache_config = make_kv_cache_config(block_size, num_blocks)
+    # Configure 3 KV cache groups
+    kv_cache_config.kv_cache_groups = [
+        (FullAttentionSpec(), [block_size]),
+        (FullAttentionSpec(), [block_size]),
+        (FullAttentionSpec(), [block_size]),
+    ]
+
+    manager = KVCacheManager(
+        kv_cache_config,
+        max_model_len=8192,
+        enable_caching=True,
+        enable_kv_cache_events=True,
+        hash_block_size=block_size,
+    )
+
+    num_tokens = block_size * blocks_to_cache
+    req = make_request("0", list(range(num_tokens)), block_size, sha256)
+
+    # Allocate slots for all groups
+    _ = manager.allocate_slots(req, num_tokens)
+    events = manager.take_events()
+
+    # Should have one BlockStored event per group
+    stored_events = [e for e in events if isinstance(e, BlockStored)]
+    assert len(stored_events) == 3, "Should have one BlockStored event per group"
+
+    # Verify each event has correct group_ids
+    for group_id, event in enumerate(stored_events):
+        assert isinstance(event, BlockStored)
+        assert event.group_ids is not None, "group_ids should not be None"
+        assert len(event.group_ids) == blocks_to_cache, (
+            f"Group {group_id} should have {blocks_to_cache} group_ids"
+        )
+        # All group_ids in this event should be the same (for this group)
+        assert all(gid == group_id for gid in event.group_ids), (
+            f"All group_ids should be {group_id} for group {group_id}"
+        )
+        assert len(event.block_hashes) == blocks_to_cache
+
+    # Now test BlockRemoved events
+    manager.free(req)
+    req2 = make_request("1", list(range(num_tokens)), block_size, sha256)
+    _ = manager.allocate_slots(req2, num_tokens)
+    events = manager.take_events()
+
+    # Should have BlockRemoved events for evicted blocks
+    removed_events = [e for e in events if isinstance(e, BlockRemoved)]
+    assert len(removed_events) > 0, "Should have BlockRemoved events"
+
+    # Verify BlockRemoved events have group_ids
+    for event in removed_events:
+        assert isinstance(event, BlockRemoved)
+        assert event.group_ids is not None, "BlockRemoved group_ids should not be None"
+        assert len(event.group_ids) == len(event.block_hashes), (
+            "group_ids length should match block_hashes length"
+        )
+        # Each group_id should be valid (0, 1, or 2)
+        assert all(0 <= gid < 3 for gid in event.group_ids), (
+            "All group_ids should be in range [0, 3)"
+        )
+
+    manager.free(req2)
+
+
 def test_eagle_enabled_removes_last_block():
     """Verify Eagle does NOT remove blocks when request
     length is divisible by block size."""

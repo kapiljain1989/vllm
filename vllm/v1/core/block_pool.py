@@ -22,6 +22,7 @@ from vllm.v1.core.kv_cache_utils import (
     KVCacheBlock,
     generate_block_hash_extra_keys,
     get_block_hash,
+    get_group_id,
     make_block_hash_with_group_id,
     maybe_convert_block_hash,
 )
@@ -254,6 +255,9 @@ class BlockPool:
         new_hashes: list[ExternalBlockHash] | None = (
             [] if self.enable_kv_cache_events else None
         )
+        new_group_ids: list[int] | None = (
+            [] if self.enable_kv_cache_events else None
+        )
         for i, blk in enumerate(new_full_blocks):
             # Some blocks may be null blocks when enabling sparse attention like
             # sliding window attention, or Mamba models with prefix-caching in
@@ -271,6 +275,7 @@ class BlockPool:
             self.cached_block_hash_to_block.insert(block_hash_with_group_id, blk)
             if new_hashes is not None:
                 new_hashes.append(maybe_convert_block_hash(block_hash))
+                new_group_ids.append(kv_cache_group_id)
 
         if self.enable_kv_cache_events:
             if num_cached_blocks == 0:
@@ -314,6 +319,7 @@ class BlockPool:
                     if request.lora_request
                     else None,
                     extra_keys=extra_keys_list if extra_keys_list else None,
+                    group_ids=new_group_ids,
                 )
             )
 
@@ -377,14 +383,11 @@ class BlockPool:
         block.reset_hash()
 
         if self.enable_kv_cache_events:
-            # FIXME (Chen): Not sure whether we should return `hash_value`
-            # or `(hash_value, group_id)` here. But it's fine now because
-            # we disable hybrid kv cache manager when kv cache event is
-            # enabled, so there is only one group.
             self.kv_event_queue.append(
                 BlockRemoved(
                     block_hashes=[maybe_convert_block_hash(get_block_hash(block_hash))],
                     medium=MEDIUM_GPU,
+                    group_ids=[get_group_id(block_hash)],
                 )
             )
         return True
