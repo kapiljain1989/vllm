@@ -419,7 +419,7 @@ class OffloadingConnectorScheduler:
                 yield BlockRemoved(
                     block_hashes=block_hashes,
                     medium=event.medium,
-                    group_ids=None,
+                    evicted_groups=None,
                 )
             else:
                 yield BlockStored(
@@ -430,5 +430,5 @@ class OffloadingConnectorScheduler:
                     block_size=event.block_size,
                     medium=event.medium,
                     lora_name=None,
-                    group_ids=None,
+                    stored_groups=None,
                 )

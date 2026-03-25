@@ -319,7 +319,7 @@ class BlockPool:
                     if request.lora_request
                     else None,
                     extra_keys=extra_keys_list if extra_keys_list else None,
-                    group_ids=new_group_ids,
+                    stored_groups=new_group_ids,
                 )
             )
 
@@ -387,7 +387,7 @@ class BlockPool:
                 BlockRemoved(
                     block_hashes=[maybe_convert_block_hash(get_block_hash(block_hash))],
                     medium=MEDIUM_GPU,
-                    group_ids=[get_group_id(block_hash)],
+                    evicted_groups=[get_group_id(block_hash)],
                 )
             )
         return True

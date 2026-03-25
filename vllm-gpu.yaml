@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vllm-gpu
+  labels:
+    app: vllm-gpu
+spec:
+  restartPolicy: Never
+  securityContext:
+    runAsUser: 0
+  containers:
+  - name: vllm
+    image: nvidia/cuda:12.9.1-devel-ubuntu22.04
+    command:
+    - /bin/bash
+    - -c
+    - |
+      set -ex
+
+      # Install dependencies
+      apt-get update
+      apt-get install -y git curl ca-certificates software-properties-common build-essential
+
+      # Install Python 3.12
+      add-apt-repository ppa:deadsnakes/ppa -y
+      apt-get update
+      apt-get install -y python3.12 python3.12-dev python3.12-venv python3-pip
+
+      # Install uv
+      curl -LsSf https://astral.sh/uv/install.sh | sh
+      export PATH="/root/.local/bin:$PATH"
+
+      # Clone and build vLLM
+      git clone https://github.com/vllm-project/vllm.git /vllm
+      cd /vllm
+
+      uv venv --python 3.12
+      source .venv/bin/activate
+
+      VLLM_USE_PRECOMPILED=1 uv pip install -e .
+
+      echo "Environment ready! Keeping container alive..."
+      sleep infinity
+    resources:
+      limits:
+        nvidia.com/gpu: 2
+      requests:
+        nvidia.com/gpu: 2
+    env:
+    - name: NVIDIA_VISIBLE_DEVICES
+      value: "all"
+    - name: NVIDIA_DRIVER_CAPABILITIES
+      value: "compute,utility"

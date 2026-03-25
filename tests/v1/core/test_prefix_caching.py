@@ -2121,16 +2121,16 @@ def test_kv_cache_events_with_hybrid_groups():
     stored_events = [e for e in events if isinstance(e, BlockStored)]
     assert len(stored_events) == 3, "Should have one BlockStored event per group"
 
-    # Verify each event has correct group_ids
+    # Verify each event has correct stored_groups
     for group_id, event in enumerate(stored_events):
         assert isinstance(event, BlockStored)
-        assert event.group_ids is not None, "group_ids should not be None"
-        assert len(event.group_ids) == blocks_to_cache, (
-            f"Group {group_id} should have {blocks_to_cache} group_ids"
+        assert event.stored_groups is not None, "stored_groups should not be None"
+        assert len(event.stored_groups) == blocks_to_cache, (
+            f"Group {group_id} should have {blocks_to_cache} stored_groups"
         )
-        # All group_ids in this event should be the same (for this group)
-        assert all(gid == group_id for gid in event.group_ids), (
-            f"All group_ids should be {group_id} for group {group_id}"
+        # All stored_groups in this event should be the same (for this group)
+        assert all(gid == group_id for gid in event.stored_groups), (
+            f"All stored_groups should be {group_id} for group {group_id}"
         )
         assert len(event.block_hashes) == blocks_to_cache
 
@@ -2144,16 +2144,16 @@ def test_kv_cache_events_with_hybrid_groups():
     removed_events = [e for e in events if isinstance(e, BlockRemoved)]
     assert len(removed_events) > 0, "Should have BlockRemoved events"
 
-    # Verify BlockRemoved events have group_ids
+    # Verify BlockRemoved events have evicted_groups
     for event in removed_events:
         assert isinstance(event, BlockRemoved)
-        assert event.group_ids is not None, "BlockRemoved group_ids should not be None"
-        assert len(event.group_ids) == len(event.block_hashes), (
-            "group_ids length should match block_hashes length"
+        assert event.evicted_groups is not None, "BlockRemoved evicted_groups should not be None"
+        assert len(event.evicted_groups) == len(event.block_hashes), (
+            "evicted_groups length should match block_hashes length"
         )
         # Each group_id should be valid (0, 1, or 2)
-        assert all(0 <= gid < 3 for gid in event.group_ids), (
-            "All group_ids should be in range [0, 3)"
+        assert all(0 <= gid < 3 for gid in event.evicted_groups), (
+            "All evicted_groups should be in range [0, 3)"
         )
 
     manager.free(req2)

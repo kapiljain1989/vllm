@@ -67,10 +67,11 @@ class BlockStored(KVCacheEvent):
     KV cache consumers to reconstruct block hashes.
     """
 
-    group_ids: list[int] | None = None
-    """KV cache group IDs, one per block in block_hashes. Used in hybrid models
-    with different attention mechanisms (e.g., full attention + sliding window).
-    None for non-hybrid models or backward compatibility.
+    stored_groups: list[int] | None = None
+    """KV cache group IDs for stored blocks, one per block in block_hashes.
+    Used in hybrid models with different attention mechanisms (e.g., full
+    attention + sliding window). None for non-hybrid models or backward
+    compatibility.
     """
 
     def __hash__(self) -> int:
@@ -83,7 +84,7 @@ class BlockStored(KVCacheEvent):
                 self.lora_id,
                 self.medium,
                 tuple(self.extra_keys) if self.extra_keys else None,
-                tuple(self.group_ids) if self.group_ids else None,
+                tuple(self.stored_groups) if self.stored_groups else None,
             )
         )
 
@@ -92,10 +93,10 @@ class BlockRemoved(KVCacheEvent):
     block_hashes: list[ExternalBlockHash]
     medium: str | None
 
-    group_ids: list[int] | None = None
-    """KV cache group IDs, one per block in block_hashes. Used in hybrid models
-    with different attention mechanisms. None for non-hybrid models or backward
-    compatibility.
+    evicted_groups: list[int] | None = None
+    """KV cache group IDs for evicted blocks, one per block in block_hashes.
+    Used in hybrid models with different attention mechanisms. None for
+    non-hybrid models or backward compatibility.
     """
 
     def __hash__(self) -> int:
@@ -103,7 +104,7 @@ class BlockRemoved(KVCacheEvent):
             (
                 tuple(self.block_hashes),
                 self.medium,
-                tuple(self.group_ids) if self.group_ids else None,
+                tuple(self.evicted_groups) if self.evicted_groups else None,
             )
         )
 
