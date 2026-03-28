@@ -155,6 +155,11 @@ class EngineCoreClient(ABC):
     def reset_encoder_cache(self) -> None:
         raise NotImplementedError
 
+    def evict_offload_block(
+        self, block_hash: str, group_idx: int, pod_id: str | None = None
+    ) -> None:
+        raise NotImplementedError
+
     def sleep(self, level: int = 1, mode: PauseMode = "abort") -> None:
         raise NotImplementedError
 
@@ -236,6 +241,11 @@ class EngineCoreClient(ABC):
         raise NotImplementedError
 
     async def reset_encoder_cache_async(self) -> None:
+        raise NotImplementedError
+
+    async def evict_offload_block_async(
+        self, block_hash: str, group_idx: int, pod_id: str | None = None
+    ) -> None:
         raise NotImplementedError
 
     async def sleep_async(self, level: int = 1, mode: PauseMode = "abort") -> None:
@@ -324,6 +334,11 @@ class InprocClient(EngineCoreClient):
 
     def reset_encoder_cache(self) -> None:
         self.engine_core.reset_encoder_cache()
+
+    def evict_offload_block(
+        self, block_hash: str, group_idx: int, pod_id: str | None = None
+    ) -> None:
+        self.engine_core.evict_offload_block(block_hash, group_idx, pod_id)
 
     def sleep(self, level: int = 1, mode: PauseMode = "abort") -> None:
         if mode == "wait":
@@ -838,6 +853,11 @@ class SyncMPClient(MPClient):
     def reset_encoder_cache(self) -> None:
         self.call_utility("reset_encoder_cache")
 
+    def evict_offload_block(
+        self, block_hash: str, group_idx: int, pod_id: str | None = None
+    ) -> None:
+        self.call_utility("evict_offload_block", block_hash, group_idx, pod_id)
+
     def add_lora(self, lora_request: LoRARequest) -> bool:
         return self.call_utility("add_lora", lora_request)
 
@@ -1091,6 +1111,11 @@ class AsyncMPClient(MPClient):
 
     async def reset_encoder_cache_async(self) -> None:
         await self.call_utility_async("reset_encoder_cache")
+
+    async def evict_offload_block_async(
+        self, block_hash: str, group_idx: int, pod_id: str | None = None
+    ) -> None:
+        await self.call_utility_async("evict_offload_block", block_hash, group_idx, pod_id)
 
     async def sleep_async(self, level: int = 1, mode: PauseMode = "abort") -> None:
         await self.call_utility_async("sleep", level, mode)

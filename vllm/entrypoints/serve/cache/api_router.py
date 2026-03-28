@@ -66,6 +66,36 @@ async def reset_encoder_cache(raw_request: Request):
     return Response(status_code=200)
 
 
+@router.post("/evict_block")
+async def evict_block(
+    raw_request: Request,
+    block_hash: str = Query(..., description="Block hash (hex string)"),
+    group_idx: int = Query(default=0, description="KV cache group index"),
+    pod_id: str | None = Query(default=None, description="Pod ID to target"),
+):
+    """
+    Send a BlockRemoved event for a specific block from a specific group on a specific pod.
+    This is a dev API for testing KV offload eviction events.
+
+    Args:
+        block_hash: Block hash as a hex string
+        group_idx: KV cache group index (default 0)
+        pod_id: Optional pod ID to target (if None, broadcasts to all)
+
+    Example:
+        POST /evict_block?block_hash=deadbeef&group_idx=0&pod_id=pod-123
+    """
+    logger.info(
+        "Sending BlockRemoved event for block_hash=%s, group_idx=%d, pod_id=%s",
+        block_hash,
+        group_idx,
+        pod_id,
+    )
+
+    await engine_client(raw_request).evict_offload_block(block_hash, group_idx, pod_id)
+    return Response(status_code=200)
+
+
 def attach_router(app: FastAPI):
     if not envs.VLLM_SERVER_DEV_MODE:
         return

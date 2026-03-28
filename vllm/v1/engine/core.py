@@ -709,6 +709,43 @@ class EngineCore:
         # Reset the GPU model runner's encoder cache (physical storage)
         self.model_executor.reset_encoder_cache()
 
+    def evict_offload_block(
+        self, block_hash: str, group_idx: int, pod_id: str | None = None
+    ) -> None:
+        """Send a BlockRemoved event for a specific block from a specific group.
+
+        Args:
+            block_hash: Block hash as a hex string
+            group_idx: KV cache group index
+            pod_id: Optional pod ID to target (if None, broadcasts to all)
+        """
+        import time
+
+        from vllm.distributed.kv_events import BlockRemoved, KVEventBatch
+
+        # Convert hex string to bytes
+        block_hash_bytes = bytes.fromhex(block_hash)
+
+        # Create BlockRemoved event
+        event = BlockRemoved(
+            block_hashes=[block_hash_bytes],
+            medium="GPU",  # Assuming CPU offload
+            evicted_groups=[group_idx],
+        )
+
+        # Publish the event
+        batch = KVEventBatch(
+            ts=time.time(), events=[event], data_parallel_rank=None
+        )
+        self.scheduler.kv_event_publisher.publish(batch)
+
+        logger.info(
+            "Published BlockRemoved event for block_hash=%s, group_idx=%d, pod_id=%s",
+            block_hash,
+            group_idx,
+            pod_id,
+        )
+
     def _reset_caches(self, reset_running_requests=True) -> None:
         self.reset_prefix_cache(reset_running_requests=reset_running_requests)
         self.reset_mm_cache()

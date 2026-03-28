@@ -356,6 +356,18 @@ class LLMEngine:
         """
         self.engine_core.reset_encoder_cache()
 
+    def evict_offload_block(
+        self, block_hash: str, group_idx: int, pod_id: str | None = None
+    ) -> None:
+        """Send a BlockRemoved event for a specific block from a specific group.
+
+        Args:
+            block_hash: Block hash as a hex string
+            group_idx: KV cache group index
+            pod_id: Optional pod ID to target (if None, broadcasts to all)
+        """
+        self.engine_core.evict_offload_block(block_hash, group_idx, pod_id)
+
     def sleep(self, level: int = 1, mode: PauseMode = "abort"):
         self.engine_core.sleep(level, mode)
 
