@@ -161,6 +161,28 @@ class EngineClient(ABC):
         ...
 
     @abstractmethod
+    async def store_offload_block(
+        self,
+        block_hash: str,
+        group_idx: int,
+        pod_id: str | None = None,
+        block_size: int = 16,
+        parent_block_hash: str | None = None,
+        medium: str = "CPU",
+    ) -> None:
+        """Send a BlockStored event for a specific block to a specific group.
+
+        Args:
+            block_hash: Block hash as a hex string
+            group_idx: KV cache group index
+            pod_id: Optional pod ID to target (if None, broadcasts to all)
+            block_size: Block size in tokens
+            parent_block_hash: Optional parent block hash as hex string
+            medium: Storage medium (CPU/GPU)
+        """
+        ...
+
+    @abstractmethod
     async def sleep(self, level: int = 1, mode: "PauseMode" = "abort") -> None:
         """Sleep the engine"""
         ...

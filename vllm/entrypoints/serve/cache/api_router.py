@@ -96,6 +96,49 @@ async def evict_block(
     return Response(status_code=200)
 
 
+@router.post("/store_block")
+async def store_block(
+    raw_request: Request,
+    block_hash: str = Query(..., description="Block hash (hex string)"),
+    group_idx: int = Query(default=0, description="KV cache group index"),
+    pod_id: str | None = Query(default=None, description="Pod ID to target"),
+    block_size: int = Query(default=16, description="Block size in tokens"),
+    parent_block_hash: str | None = Query(
+        default=None, description="Parent block hash (hex string)"
+    ),
+    medium: str = Query(default="CPU", description="Storage medium (CPU/GPU)"),
+):
+    """
+    Send a BlockStored event for a specific block to a specific group on a specific pod.
+    This is a dev API for testing KV offload storage events.
+
+    Args:
+        block_hash: Block hash as a hex string
+        group_idx: KV cache group index (default 0)
+        pod_id: Optional pod ID to target (if None, broadcasts to all)
+        block_size: Block size in tokens (default 16)
+        parent_block_hash: Optional parent block hash as hex string
+        medium: Storage medium (default "CPU")
+
+    Example:
+        POST /store_block?block_hash=deadbeef&group_idx=0&pod_id=pod-123&block_size=16
+    """
+    logger.info(
+        "Sending BlockStored event for block_hash=%s, group_idx=%d, pod_id=%s, "
+        "block_size=%d, medium=%s",
+        block_hash,
+        group_idx,
+        pod_id,
+        block_size,
+        medium,
+    )
+
+    await engine_client(raw_request).store_offload_block(
+        block_hash, group_idx, pod_id, block_size, parent_block_hash, medium
+    )
+    return Response(status_code=200)
+
+
 def attach_router(app: FastAPI):
     if not envs.VLLM_SERVER_DEV_MODE:
         return

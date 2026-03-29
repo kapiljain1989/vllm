@@ -917,6 +917,19 @@ class AsyncLLM(EngineClient):
     ) -> None:
         await self.engine_core.evict_offload_block_async(block_hash, group_idx, pod_id)
 
+    async def store_offload_block(
+        self,
+        block_hash: str,
+        group_idx: int,
+        pod_id: str | None = None,
+        block_size: int = 16,
+        parent_block_hash: str | None = None,
+        medium: str = "CPU",
+    ) -> None:
+        await self.engine_core.store_offload_block_async(
+            block_hash, group_idx, pod_id, block_size, parent_block_hash, medium
+        )
+
     async def sleep(self, level: int = 1, mode: PauseMode = "abort") -> None:
         await self.engine_core.sleep_async(level, mode)
 

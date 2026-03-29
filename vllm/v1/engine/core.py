@@ -746,6 +746,63 @@ class EngineCore:
             pod_id,
         )
 
+    def store_offload_block(
+        self,
+        block_hash: str,
+        group_idx: int,
+        pod_id: str | None = None,
+        block_size: int = 16,
+        parent_block_hash: str | None = None,
+        medium: str = "CPU",
+    ) -> None:
+        """Send a BlockStored event for a specific block to a specific group.
+
+        Args:
+            block_hash: Block hash as a hex string
+            group_idx: KV cache group index
+            pod_id: Optional pod ID to target (if None, broadcasts to all)
+            block_size: Block size in tokens
+            parent_block_hash: Optional parent block hash as hex string
+            medium: Storage medium (CPU/GPU)
+        """
+        import time
+
+        from vllm.distributed.kv_events import BlockStored, KVEventBatch
+
+        # Convert hex string to bytes
+        block_hash_bytes = bytes.fromhex(block_hash)
+        parent_hash_bytes = (
+            bytes.fromhex(parent_block_hash) if parent_block_hash else None
+        )
+
+        # Create BlockStored event
+        event = BlockStored(
+            block_hashes=[block_hash_bytes],
+            parent_block_hash=parent_hash_bytes,
+            token_ids=[],  # Empty for dev API
+            block_size=block_size,
+            lora_id=None,
+            medium=medium,
+            lora_name=None,
+            stored_groups=[group_idx],
+        )
+
+        # Publish the event
+        batch = KVEventBatch(
+            ts=time.time(), events=[event], data_parallel_rank=None
+        )
+        self.scheduler.kv_event_publisher.publish(batch)
+
+        logger.info(
+            "Published BlockStored event for block_hash=%s, group_idx=%d, "
+            "pod_id=%s, block_size=%d, medium=%s",
+            block_hash,
+            group_idx,
+            pod_id,
+            block_size,
+            medium,
+        )
+
     def _reset_caches(self, reset_running_requests=True) -> None:
         self.reset_prefix_cache(reset_running_requests=reset_running_requests)
         self.reset_mm_cache()

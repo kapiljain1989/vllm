@@ -160,6 +160,17 @@ class EngineCoreClient(ABC):
     ) -> None:
         raise NotImplementedError
 
+    def store_offload_block(
+        self,
+        block_hash: str,
+        group_idx: int,
+        pod_id: str | None = None,
+        block_size: int = 16,
+        parent_block_hash: str | None = None,
+        medium: str = "CPU",
+    ) -> None:
+        raise NotImplementedError
+
     def sleep(self, level: int = 1, mode: PauseMode = "abort") -> None:
         raise NotImplementedError
 
@@ -245,6 +256,17 @@ class EngineCoreClient(ABC):
 
     async def evict_offload_block_async(
         self, block_hash: str, group_idx: int, pod_id: str | None = None
+    ) -> None:
+        raise NotImplementedError
+
+    async def store_offload_block_async(
+        self,
+        block_hash: str,
+        group_idx: int,
+        pod_id: str | None = None,
+        block_size: int = 16,
+        parent_block_hash: str | None = None,
+        medium: str = "CPU",
     ) -> None:
         raise NotImplementedError
 
@@ -339,6 +361,19 @@ class InprocClient(EngineCoreClient):
         self, block_hash: str, group_idx: int, pod_id: str | None = None
     ) -> None:
         self.engine_core.evict_offload_block(block_hash, group_idx, pod_id)
+
+    def store_offload_block(
+        self,
+        block_hash: str,
+        group_idx: int,
+        pod_id: str | None = None,
+        block_size: int = 16,
+        parent_block_hash: str | None = None,
+        medium: str = "CPU",
+    ) -> None:
+        self.engine_core.store_offload_block(
+            block_hash, group_idx, pod_id, block_size, parent_block_hash, medium
+        )
 
     def sleep(self, level: int = 1, mode: PauseMode = "abort") -> None:
         if mode == "wait":
@@ -858,6 +893,25 @@ class SyncMPClient(MPClient):
     ) -> None:
         self.call_utility("evict_offload_block", block_hash, group_idx, pod_id)
 
+    def store_offload_block(
+        self,
+        block_hash: str,
+        group_idx: int,
+        pod_id: str | None = None,
+        block_size: int = 16,
+        parent_block_hash: str | None = None,
+        medium: str = "CPU",
+    ) -> None:
+        self.call_utility(
+            "store_offload_block",
+            block_hash,
+            group_idx,
+            pod_id,
+            block_size,
+            parent_block_hash,
+            medium,
+        )
+
     def add_lora(self, lora_request: LoRARequest) -> bool:
         return self.call_utility("add_lora", lora_request)
 
@@ -1116,6 +1170,25 @@ class AsyncMPClient(MPClient):
         self, block_hash: str, group_idx: int, pod_id: str | None = None
     ) -> None:
         await self.call_utility_async("evict_offload_block", block_hash, group_idx, pod_id)
+
+    async def store_offload_block_async(
+        self,
+        block_hash: str,
+        group_idx: int,
+        pod_id: str | None = None,
+        block_size: int = 16,
+        parent_block_hash: str | None = None,
+        medium: str = "CPU",
+    ) -> None:
+        await self.call_utility_async(
+            "store_offload_block",
+            block_hash,
+            group_idx,
+            pod_id,
+            block_size,
+            parent_block_hash,
+            medium,
+        )
 
     async def sleep_async(self, level: int = 1, mode: PauseMode = "abort") -> None:
         await self.call_utility_async("sleep", level, mode)

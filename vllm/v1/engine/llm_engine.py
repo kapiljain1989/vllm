@@ -368,6 +368,29 @@ class LLMEngine:
         """
         self.engine_core.evict_offload_block(block_hash, group_idx, pod_id)
 
+    def store_offload_block(
+        self,
+        block_hash: str,
+        group_idx: int,
+        pod_id: str | None = None,
+        block_size: int = 16,
+        parent_block_hash: str | None = None,
+        medium: str = "CPU",
+    ) -> None:
+        """Send a BlockStored event for a specific block to a specific group.
+
+        Args:
+            block_hash: Block hash as a hex string
+            group_idx: KV cache group index
+            pod_id: Optional pod ID to target (if None, broadcasts to all)
+            block_size: Block size in tokens
+            parent_block_hash: Optional parent block hash as hex string
+            medium: Storage medium (CPU/GPU)
+        """
+        self.engine_core.store_offload_block(
+            block_hash, group_idx, pod_id, block_size, parent_block_hash, medium
+        )
+
     def sleep(self, level: int = 1, mode: PauseMode = "abort"):
         self.engine_core.sleep(level, mode)
 
