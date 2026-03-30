@@ -754,6 +754,7 @@ class EngineCore:
         block_size: int = 16,
         parent_block_hash: str | None = None,
         medium: str = "CPU",
+        token_ids: list[int] | None = None,
     ) -> None:
         """Send a BlockStored event for a specific block to a specific group.
 
@@ -764,6 +765,7 @@ class EngineCore:
             block_size: Block size in tokens
             parent_block_hash: Optional parent block hash as hex string
             medium: Storage medium (CPU/GPU)
+            token_ids: List of token IDs for this block
         """
         import time
 
@@ -775,11 +777,14 @@ class EngineCore:
             bytes.fromhex(parent_block_hash) if parent_block_hash else None
         )
 
+        # Use provided token_ids or empty list
+        tokens = token_ids if token_ids is not None else []
+
         # Create BlockStored event
         event = BlockStored(
             block_hashes=[block_hash_bytes],
             parent_block_hash=parent_hash_bytes,
-            token_ids=[],  # Empty for dev API
+            token_ids=tokens,
             block_size=block_size,
             lora_id=None,
             medium=medium,
@@ -795,12 +800,13 @@ class EngineCore:
 
         logger.info(
             "Published BlockStored event for block_hash=%s, group_idx=%d, "
-            "pod_id=%s, block_size=%d, medium=%s",
+            "pod_id=%s, block_size=%d, medium=%s, tokens=%d",
             block_hash,
             group_idx,
             pod_id,
             block_size,
             medium,
+            len(tokens),
         )
 
     def _reset_caches(self, reset_running_requests=True) -> None:

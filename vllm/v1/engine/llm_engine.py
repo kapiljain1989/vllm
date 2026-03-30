@@ -376,6 +376,7 @@ class LLMEngine:
         block_size: int = 16,
         parent_block_hash: str | None = None,
         medium: str = "CPU",
+        token_ids: list[int] | None = None,
     ) -> None:
         """Send a BlockStored event for a specific block to a specific group.
 
@@ -386,9 +387,10 @@ class LLMEngine:
             block_size: Block size in tokens
             parent_block_hash: Optional parent block hash as hex string
             medium: Storage medium (CPU/GPU)
+            token_ids: List of token IDs for this block
         """
         self.engine_core.store_offload_block(
-            block_hash, group_idx, pod_id, block_size, parent_block_hash, medium
+            block_hash, group_idx, pod_id, block_size, parent_block_hash, medium, token_ids
         )
 
     def sleep(self, level: int = 1, mode: PauseMode = "abort"):

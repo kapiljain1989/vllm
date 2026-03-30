@@ -168,6 +168,7 @@ class EngineCoreClient(ABC):
         block_size: int = 16,
         parent_block_hash: str | None = None,
         medium: str = "CPU",
+        token_ids: list[int] | None = None,
     ) -> None:
         raise NotImplementedError
 
@@ -267,6 +268,7 @@ class EngineCoreClient(ABC):
         block_size: int = 16,
         parent_block_hash: str | None = None,
         medium: str = "CPU",
+        token_ids: list[int] | None = None,
     ) -> None:
         raise NotImplementedError
 
@@ -370,9 +372,10 @@ class InprocClient(EngineCoreClient):
         block_size: int = 16,
         parent_block_hash: str | None = None,
         medium: str = "CPU",
+        token_ids: list[int] | None = None,
     ) -> None:
         self.engine_core.store_offload_block(
-            block_hash, group_idx, pod_id, block_size, parent_block_hash, medium
+            block_hash, group_idx, pod_id, block_size, parent_block_hash, medium, token_ids
         )
 
     def sleep(self, level: int = 1, mode: PauseMode = "abort") -> None:
@@ -901,6 +904,7 @@ class SyncMPClient(MPClient):
         block_size: int = 16,
         parent_block_hash: str | None = None,
         medium: str = "CPU",
+        token_ids: list[int] | None = None,
     ) -> None:
         self.call_utility(
             "store_offload_block",
@@ -910,6 +914,7 @@ class SyncMPClient(MPClient):
             block_size,
             parent_block_hash,
             medium,
+            token_ids,
         )
 
     def add_lora(self, lora_request: LoRARequest) -> bool:
@@ -1179,6 +1184,7 @@ class AsyncMPClient(MPClient):
         block_size: int = 16,
         parent_block_hash: str | None = None,
         medium: str = "CPU",
+        token_ids: list[int] | None = None,
     ) -> None:
         await self.call_utility_async(
             "store_offload_block",
@@ -1188,6 +1194,7 @@ class AsyncMPClient(MPClient):
             block_size,
             parent_block_hash,
             medium,
+            token_ids,
         )
 
     async def sleep_async(self, level: int = 1, mode: PauseMode = "abort") -> None:

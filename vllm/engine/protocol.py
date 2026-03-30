@@ -169,6 +169,7 @@ class EngineClient(ABC):
         block_size: int = 16,
         parent_block_hash: str | None = None,
         medium: str = "CPU",
+        token_ids: list[int] | None = None,
     ) -> None:
         """Send a BlockStored event for a specific block to a specific group.
 
@@ -179,6 +180,7 @@ class EngineClient(ABC):
             block_size: Block size in tokens
             parent_block_hash: Optional parent block hash as hex string
             medium: Storage medium (CPU/GPU)
+            token_ids: List of token IDs for this block
         """
         ...
 

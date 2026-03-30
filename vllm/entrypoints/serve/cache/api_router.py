@@ -107,6 +107,9 @@ async def store_block(
         default=None, description="Parent block hash (hex string)"
     ),
     medium: str = Query(default="CPU", description="Storage medium (CPU/GPU)"),
+    token_ids: str | None = Query(
+        default=None, description="Comma-separated token IDs (e.g., '123,456,789')"
+    ),
 ):
     """
     Send a BlockStored event for a specific block to a specific group on a specific pod.
@@ -119,22 +122,33 @@ async def store_block(
         block_size: Block size in tokens (default 16)
         parent_block_hash: Optional parent block hash as hex string
         medium: Storage medium (default "CPU")
+        token_ids: Comma-separated token IDs (e.g., '123,456,789')
 
     Example:
-        POST /store_block?block_hash=deadbeef&group_idx=0&pod_id=pod-123&block_size=16
+        POST /store_block?block_hash=deadbeef&group_idx=0&pod_id=pod-123&block_size=16&token_ids=123,456,789
     """
+    # Parse token IDs if provided
+    token_list: list[int] = []
+    if token_ids:
+        try:
+            token_list = [int(t.strip()) for t in token_ids.split(",")]
+        except ValueError as e:
+            logger.error("Invalid token_ids format: %s", e)
+            return Response(status_code=400, content=f"Invalid token_ids format: {e}")
+
     logger.info(
         "Sending BlockStored event for block_hash=%s, group_idx=%d, pod_id=%s, "
-        "block_size=%d, medium=%s",
+        "block_size=%d, medium=%s, tokens=%d",
         block_hash,
         group_idx,
         pod_id,
         block_size,
         medium,
+        len(token_list),
     )
 
     await engine_client(raw_request).store_offload_block(
-        block_hash, group_idx, pod_id, block_size, parent_block_hash, medium
+        block_hash, group_idx, pod_id, block_size, parent_block_hash, medium, token_list
     )
     return Response(status_code=200)
 
